@@ -58,7 +58,8 @@ public class ScreenCanvas extends Canvas implements Runnable {
             case '\n':
                 curCol = 0;
                 curRow++;
-                if (curRow >= rows) scrollUp();
+                if (curRow >= rows)
+                    scrollUp();
                 break;
             case '\r':
                 curCol = 0;
@@ -80,7 +81,8 @@ public class ScreenCanvas extends Canvas implements Runnable {
                     if (curCol >= cols) {
                         curCol = 0;
                         curRow++;
-                        if (curRow >= rows) scrollUp();
+                        if (curRow >= rows)
+                            scrollUp();
                     }
                 }
                 break;
@@ -97,8 +99,8 @@ public class ScreenCanvas extends Canvas implements Runnable {
         ch = escapeBuf.charAt(1);
         if (ch == '[')
             return escapeBuf.length() > 2 &&
-                   escapeBuf.charAt(escapeBuf.length() - 1) >= '@' &&
-                   escapeBuf.charAt(escapeBuf.length() - 1) <= '~';
+                    escapeBuf.charAt(escapeBuf.length() - 1) >= '@' &&
+                    escapeBuf.charAt(escapeBuf.length() - 1) <= '~';
 
         return escapeBuf.length() == 2;
     }
@@ -111,7 +113,8 @@ public class ScreenCanvas extends Canvas implements Runnable {
             if (curCol >= cols) {
                 curCol = 0;
                 curRow++;
-                if (curRow >= rows) scrollUp();
+                if (curRow >= rows)
+                    scrollUp();
             }
         }
     }
@@ -166,10 +169,14 @@ public class ScreenCanvas extends Canvas implements Runnable {
     }
 
     private void clampCursor() {
-        if (curCol < 0) curCol = 0;
-        if (curCol >= cols) curCol = cols - 1;
-        if (curRow < 0) curRow = 0;
-        if (curRow >= rows) curRow = rows - 1;
+        if (curCol < 0)
+            curCol = 0;
+        if (curCol >= cols)
+            curCol = cols - 1;
+        if (curRow < 0)
+            curRow = 0;
+        if (curRow >= rows)
+            curRow = rows - 1;
     }
 
     private void handleEscapeSequence(String seq) {
@@ -259,8 +266,10 @@ public class ScreenCanvas extends Canvas implements Runnable {
         int newCols = getWidth() / TinyFont.CELL_W;
         int newRows = getHeight() / TinyFont.CELL_H;
 
-        if (newCols < 1) newCols = DEFAULT_COLS;
-        if (newRows < 1) newRows = DEFAULT_ROWS;
+        if (newCols < 1)
+            newCols = DEFAULT_COLS;
+        if (newRows < 1)
+            newRows = DEFAULT_ROWS;
 
         if (newCols != cols || newRows != rows) {
             resizeBuffer(newCols, newRows);
@@ -287,10 +296,14 @@ public class ScreenCanvas extends Canvas implements Runnable {
         buf = newBuf;
         cols = newCols;
         rows = newRows;
-        if (curCol >= cols) curCol = cols - 1;
-        if (curCol < 0) curCol = 0;
-        if (curRow >= rows) curRow = rows - 1;
-        if (curRow < 0) curRow = 0;
+        if (curCol >= cols)
+            curCol = cols - 1;
+        if (curCol < 0)
+            curCol = 0;
+        if (curRow >= rows)
+            curRow = rows - 1;
+        if (curRow < 0)
+            curRow = 0;
     }
 
     private void scrollUp() {
@@ -355,7 +368,10 @@ public class ScreenCanvas extends Canvas implements Runnable {
             boolean doRepaint = false;
             long now;
 
-            try { Thread.sleep(REFRESH_MS); } catch (InterruptedException e) {}
+            try {
+                Thread.sleep(REFRESH_MS);
+            } catch (InterruptedException e) {
+            }
             now = System.currentTimeMillis();
 
             synchronized (this) {
@@ -376,7 +392,8 @@ public class ScreenCanvas extends Canvas implements Runnable {
     }
 
     protected void keyPressed(int keyCode) {
-        if (uart == null) return;
+        if (uart == null)
+            return;
 
         try {
             char ch = 0;
@@ -384,36 +401,56 @@ public class ScreenCanvas extends Canvas implements Runnable {
             String upperName;
 
             switch (keyCode) {
-                case Canvas.KEY_NUM0: ch = '0'; break;
-                case Canvas.KEY_NUM1: ch = '1'; break;
-                case Canvas.KEY_NUM2: ch = '2'; break;
-                case Canvas.KEY_NUM3: ch = '3'; break;
-                case Canvas.KEY_NUM4: ch = '4'; break;
-                case Canvas.KEY_NUM5: ch = '5'; break;
-                case Canvas.KEY_NUM6: ch = '6'; break;
-                case Canvas.KEY_NUM7: ch = '7'; break;
-                case Canvas.KEY_NUM8: ch = '8'; break;
-                case Canvas.KEY_NUM9: ch = '9'; break;
+                case Canvas.KEY_NUM0:
+                    ch = '0';
+                    break;
+                case Canvas.KEY_NUM1:
+                    ch = '1';
+                    break;
+                case Canvas.KEY_NUM2:
+                    ch = '2';
+                    break;
+                case Canvas.KEY_NUM3:
+                    ch = '3';
+                    break;
+                case Canvas.KEY_NUM4:
+                    ch = '4';
+                    break;
+                case Canvas.KEY_NUM5:
+                    ch = '5';
+                    break;
+                case Canvas.KEY_NUM6:
+                    ch = '6';
+                    break;
+                case Canvas.KEY_NUM7:
+                    ch = '7';
+                    break;
+                case Canvas.KEY_NUM8:
+                    ch = '8';
+                    break;
+                case Canvas.KEY_NUM9:
+                    ch = '9';
+                    break;
                 default:
                     name = getKeyName(keyCode);
                     upperName = (name == null) ? null : name.toUpperCase();
                     if (keyCode == 32 ||
-                        "SPACE".equals(upperName) ||
-                        "SPACEBAR".equals(upperName) ||
-                        "SPACE BAR".equals(upperName)) {
+                            "SPACE".equals(upperName) ||
+                            "SPACEBAR".equals(upperName) ||
+                            "SPACE BAR".equals(upperName)) {
                         ch = ' ';
                     } else if (name != null && name.length() == 1) {
                         ch = name.charAt(0);
                     } else if (keyCode == -8 || keyCode == 8 ||
-                               "BACKSPACE".equals(upperName) ||
-                               "DELETE".equals(upperName)) {
+                            "BACKSPACE".equals(upperName) ||
+                            "DELETE".equals(upperName)) {
                         ch = 0x7F;
                     } else if (keyCode == -5 || keyCode == 10 || keyCode == 13 ||
-                               "ENTER".equals(upperName) ||
-                               "RETURN".equals(upperName) ||
-                               "SELECT".equals(upperName)) {
+                            "ENTER".equals(upperName) ||
+                            "RETURN".equals(upperName) ||
+                            "SELECT".equals(upperName)) {
                         ch = '\n';
-                    } 
+                    }
                     break;
             }
 
