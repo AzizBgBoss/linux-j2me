@@ -47,7 +47,8 @@ public class LinuxMIDlet extends MIDlet implements Runnable {
         Display.getDisplay(this).setCurrent(screen);
 
         disk = new DiskDevice();
-        uart = new UARTDevice(screen);
+        uart = new UARTDevice();
+        uart.setScreen(screen);
         screen.setUART(uart);
 
         bus = new MemoryBus(uart, disk);
@@ -135,8 +136,8 @@ public class LinuxMIDlet extends MIDlet implements Runnable {
             }
 
             dtb = DtbGenerator.createMinimalTree(ram.length,
-                                                 initrdAddr & 0xFFFFFFFFL,
-                                                 initrdEnd & 0xFFFFFFFFL);
+                    initrdAddr & 0xFFFFFFFFL,
+                    initrdEnd & 0xFFFFFFFFL);
             screen.putString("Built-in DTB: " + dtb.length + " bytes\r\n");
 
             dtbOffset = topOffset;
@@ -168,55 +169,18 @@ public class LinuxMIDlet extends MIDlet implements Runnable {
 
         // ── CPU execution loop ─────────────────────────────────────────────
         // Run in bursts with yields to keep UI alive
-        final int BURST_BOOT = 200000;
-        final int BURST_INTERACTIVE = 5000;
-
+        final int BURST = 200000;
         while (!stopped && cpu.running && !bus.haltRequested) {
-            int burst = interactiveMode ? BURST_INTERACTIVE : BURST_BOOT;
-            for (int i = 0; i < burst; i++) {
+            for (int i = 0; i < BURST; i++) {
                 if (!cpu.step())
                     break;
                 if (bus.haltRequested)
                     break;
             }
-
-            {
-                int txCount = uart.getTxCount();
-                int rxPushCount = uart.getRxPushCount();
-                if (stallDebugEnabled && cpu.hasEnteredUserMode()) {
-                    stallDebugEnabled = false;
-                    quietSnapshotCount = QUIET_SNAPSHOT_MAX;
-                }
-                if (rxPushCount != lastRxPushCount) {
-                    lastRxPushCount = rxPushCount;
-                    interactiveMode = true;
-                    stallDebugEnabled = false;
-                    quietSnapshotCount = QUIET_SNAPSHOT_MAX;
-                }
-                if (txCount != lastTxCount) {
-                    lastTxCount = txCount;
-                    quietStartCycle = cpu.cycleCount;
-                    if (stallDebugEnabled && !interactiveMode) {
-                        quietSnapshotCount = 0;
-                        nextQuietSnapshotCycle = cpu.cycleCount + QUIET_SNAPSHOT_FIRST;
-                    }
-                } else if (stallDebugEnabled &&
-                           !interactiveMode &&
-                           quietSnapshotCount < QUIET_SNAPSHOT_MAX &&
-                           cpu.cycleCount >= nextQuietSnapshotCycle) {
-                    screen.putString("\r\n[stall " + (quietSnapshotCount + 1) +
-                                     "] silent=" + (cpu.cycleCount - quietStartCycle) +
-                                     " cyc\r\n");
-                    screen.putString("[state] " + cpu.getQuietStateSummary() + "\r\n");
-                    screen.putString("[hot] " + cpu.getQuietHotSummary() + "\r\n");
-                    screen.putString("[ni] " + cpu.getNiSyscallSummary() + "\r\n");
-                    screen.putString("[trace] " + cpu.getRecentPcTraceSummary() + "\r\n");
-                    quietSnapshotCount++;
-                    nextQuietSnapshotCycle = cpu.cycleCount + QUIET_SNAPSHOT_REPEAT;
-                }
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException e) {
             }
-
-            try { Thread.sleep(interactiveMode ? 5 : 1); } catch (InterruptedException e) {}
         }
 
         if (bus.haltRequested) {

@@ -30,8 +30,21 @@ public class ScreenCanvas extends Canvas implements Runnable {
         new Thread(this).start();
     }
 
+    public void serviceRepaint() {
+        if (dirty) {
+            repaint();
+            // serviceRepaints() is inherited from Canvas — call it
+            super.serviceRepaints();
+        }
+    }
+
     public void setUART(UARTDevice uart) {
         this.uart = uart;
+    }
+
+    public void forceRepaint() {
+        dirty = true;
+        repaint();
     }
 
     public synchronized void putChar(char ch) {
@@ -334,31 +347,35 @@ public class ScreenCanvas extends Canvas implements Runnable {
     }
 
     protected void paint(Graphics g) {
-        int r;
-        int c;
+        char[][] snapshot;
+        int snapCols, snapRows, snapCurCol, snapCurRow;
+        boolean snapCursor;
 
+        synchronized (this) {
+            snapCols = cols;
+            snapRows = rows;
+            snapCurCol = curCol;
+            snapCurRow = curRow;
+            snapCursor = cursorOn;
+            snapshot = new char[snapRows][snapCols];
+            for (int r = 0; r < snapRows; r++)
+                System.arraycopy(buf[r], 0, snapshot[r], 0, snapCols);
+        }
+        // draw outside lock
         g.setColor(0x000000);
         g.fillRect(0, 0, getWidth(), getHeight());
         g.setColor(0x00FF00);
-
-        synchronized (this) {
-            ensureLayout();
-            for (r = 0; r < rows; r++) {
-                int y = r * TinyFont.CELL_H;
-                for (c = 0; c < cols; c++) {
-                    char ch = buf[r][c];
-                    if (ch != ' ') {
-                        TinyFont.drawChar(g, ch, c * TinyFont.CELL_W, y);
-                    }
-                }
-            }
-
-            if (cursorOn) {
-                int cx = curCol * TinyFont.CELL_W;
-                int cy = curRow * TinyFont.CELL_H + TinyFont.GLYPH_H;
-                g.fillRect(cx, cy, TinyFont.GLYPH_W, 1);
+        for (int r = 0; r < snapRows; r++) {
+            int y = r * TinyFont.CELL_H;
+            for (int c = 0; c < snapCols; c++) {
+                char ch = snapshot[r][c];
+                if (ch != ' ')
+                    TinyFont.drawChar(g, ch, c * TinyFont.CELL_W, y);
             }
         }
+        if (snapCursor)
+            g.fillRect(snapCurCol * TinyFont.CELL_W, snapCurRow * TinyFont.CELL_H + TinyFont.GLYPH_H, TinyFont.GLYPH_W,
+                    1);
     }
 
     public void run() {

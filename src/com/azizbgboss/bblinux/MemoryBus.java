@@ -3,15 +3,15 @@ package com.azizbgboss.bblinux;
 public class MemoryBus {
 
     public static final int DEFAULT_RAM_SIZE = 16 * 1024 * 1024;
-    public static final int RAM_BASE   = 0x80000000;
-    public static final int UART_BASE  = 0x10000000;
-    public static final int DISK_BASE  = 0x20000000;
+    public static final int RAM_BASE = 0x80000000;
+    public static final int UART_BASE = 0x10000000;
+    public static final int DISK_BASE = 0x20000000;
     public static final int POWER_BASE = 0x30000000;
     public static final int CLINT_BASE = 0x02000000;
-    public static final int TEST_BASE  = 0x00100000;
+    public static final int TEST_BASE = 0x00100000;
     private static final int[] RAM_CANDIDATES = {
-        24 * 1024 * 1024,
-        DEFAULT_RAM_SIZE
+            20 * 1024 * 1024,
+            DEFAULT_RAM_SIZE
     };
 
     private static final int UART_RBR = 0;
@@ -52,10 +52,21 @@ public class MemoryBus {
         this.disk = disk;
     }
 
-    public void setResetVector(int addr) { resetVec = addr; }
-    public int resetVector() { return resetVec; }
-    public byte[] getRam() { return ram; }
-    public int getRamSize() { return ram.length; }
+    public void setResetVector(int addr) {
+        resetVec = addr;
+    }
+
+    public int resetVector() {
+        return resetVec;
+    }
+
+    public byte[] getRam() {
+        return ram;
+    }
+
+    public int getRamSize() {
+        return ram.length;
+    }
 
     private byte[] allocateRam() {
         int i;
@@ -112,7 +123,8 @@ public class MemoryBus {
     }
 
     public int loadByte(int addr) {
-        if (inRam(addr)) return ram[ramOffset(addr)] & 0xFF;
+        if (inRam(addr))
+            return ram[ramOffset(addr)] & 0xFF;
         return mmioLoadByte(addr);
     }
 
@@ -128,9 +140,9 @@ public class MemoryBus {
         if (inRam(addr)) {
             int a = ramOffset(addr);
             return (ram[a] & 0xFF) |
-                   ((ram[a + 1] & 0xFF) << 8) |
-                   ((ram[a + 2] & 0xFF) << 16) |
-                   ((ram[a + 3] & 0xFF) << 24);
+                    ((ram[a + 1] & 0xFF) << 8) |
+                    ((ram[a + 2] & 0xFF) << 16) |
+                    ((ram[a + 3] & 0xFF) << 24);
         }
         return mmioLoadWord(addr);
     }
@@ -193,6 +205,7 @@ public class MemoryBus {
                     for (i = 0; i < count; i++)
                         uart.write((char) (loadByte(buf + i) & 0xFF));
                 }
+                uart.write('w');
                 regs[10] = count;
                 break;
             }
@@ -208,6 +221,8 @@ public class MemoryBus {
                         n = 1;
                     }
                 }
+                if (n == 0)
+                    uart.write('r');
                 regs[10] = n;
                 break;
             }
@@ -231,9 +246,13 @@ public class MemoryBus {
             case 94:
                 haltRequested = true;
                 break;
-            default:
-                regs[10] = 0;
+            default: {
+                String msg = "?SYS" + syscall + " ";
+                for (int si = 0; si < msg.length(); si++)
+                    uart.write(msg.charAt(si));
+                regs[10] = -38;
                 break;
+            }
         }
     }
 
@@ -248,11 +267,14 @@ public class MemoryBus {
             int off = addr - UART_BASE;
             switch (off) {
                 case UART_RBR:
-                    if ((uartLcr & 0x80) != 0) return uartDll;
-                    if (!uart.hasData()) return 0;
+                    if ((uartLcr & 0x80) != 0)
+                        return uartDll;
+                    if (!uart.hasData())
+                        return 0;
                     return uart.read() & 0xFF;
                 case UART_IER:
-                    if ((uartLcr & 0x80) != 0) return uartDlm;
+                    if ((uartLcr & 0x80) != 0)
+                        return uartDlm;
                     return uartIer;
                 case UART_IIR:
                     return uart.hasData() ? 0x04 : 0x01;
@@ -280,10 +302,14 @@ public class MemoryBus {
 
         if (addr >= CLINT_BASE && addr < CLINT_BASE + 0x10000) {
             off = (addr - CLINT_BASE) & 0xFFFFFFFFL;
-            if (off == 0x4000L) return (int) (mtimecmp & 0xFFFFFFFFL);
-            if (off == 0x4004L) return (int) ((mtimecmp >>> 32) & 0xFFFFFFFFL);
-            if (off == 0xBFF8L) return (int) (machineTime & 0xFFFFFFFFL);
-            if (off == 0xBFFCL) return (int) ((machineTime >>> 32) & 0xFFFFFFFFL);
+            if (off == 0x4000L)
+                return (int) (mtimecmp & 0xFFFFFFFFL);
+            if (off == 0x4004L)
+                return (int) ((mtimecmp >>> 32) & 0xFFFFFFFFL);
+            if (off == 0xBFF8L)
+                return (int) (machineTime & 0xFFFFFFFFL);
+            if (off == 0xBFFCL)
+                return (int) ((machineTime >>> 32) & 0xFFFFFFFFL);
             return 0;
         }
 
@@ -296,9 +322,9 @@ public class MemoryBus {
         }
 
         return (mmioLoadByte(addr) & 0xFF) |
-               ((mmioLoadByte(addr + 1) & 0xFF) << 8) |
-               ((mmioLoadByte(addr + 2) & 0xFF) << 16) |
-               ((mmioLoadByte(addr + 3) & 0xFF) << 24);
+                ((mmioLoadByte(addr + 1) & 0xFF) << 8) |
+                ((mmioLoadByte(addr + 2) & 0xFF) << 16) |
+                ((mmioLoadByte(addr + 3) & 0xFF) << 24);
     }
 
     private void mmioStoreByte(int addr, byte val) {
@@ -347,7 +373,8 @@ public class MemoryBus {
 
         if (addr == TEST_BASE) {
             int code = val & 0xFF;
-            if (code == 0x55 || code == 0x77) haltRequested = true;
+            if (code == 0x55 || code == 0x77)
+                haltRequested = true;
         }
     }
 
@@ -369,7 +396,8 @@ public class MemoryBus {
 
         if (addr == TEST_BASE) {
             int code = val & 0xFFFF;
-            if (code == 0x5555 || code == 0x7777) haltRequested = true;
+            if (code == 0x5555 || code == 0x7777)
+                haltRequested = true;
             return;
         }
 
